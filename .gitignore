@@ -1,0 +1,19 @@
+# Exclude environment configuration and sensitive files
+blog_config.env
+api.key
+
+# Exclude backup and log files
+*.html
+post_log.txt
+
+# Exclude system files
+.DS_Store
+Thumbs.db
+
+# Exclude Python cache
+__pycache__/
+*.py[cod]
+
+# Exclude virtual environments
+venv/
+.env/
