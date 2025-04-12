@@ -5,6 +5,9 @@ api.key
 # Exclude backup and log files
 *.html
 post_log.txt
+blog_backup_*.html
+used_titles.txt
+excluded_tools.txt
 
 # Exclude system files
 .DS_Store
