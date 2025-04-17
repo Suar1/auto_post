@@ -15,12 +15,9 @@ def load_env(path):
     return env
 
 config = load_env(os.path.join(os.path.dirname(__file__), "blog_config.env"))
-
 BASE_URL = config["BASE_URL"]
 USERNAME = config["USERNAME"]
 APP_PASSWORD = config["APP_PASSWORD"]
-
-import os
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 API_KEY_PATH = os.path.join(script_dir, "api.key")
@@ -58,9 +55,8 @@ if os.path.exists(excluded_tools_path):
 else:
     excluded_tools = []
 
-# === GENERATE BLOG POST WITH GPT ===
+# === GENERATE BLOG POST ===
 log("🧠 Generating content from ChatGPT...")
-
 exclude_string = ", ".join(excluded_tools)
 prompt = (
     f"Write a short blog post (300–400 words) about a useful open-source tool "
@@ -99,7 +95,6 @@ title = extracted_title
 with open(used_titles_path, "a", encoding="utf-8") as f:
     f.write(title.strip() + "\n")
 
-# Try to extract the tool name from the title (assumes it's the first word or phrase)
 tool_candidate = title.split(":")[0].strip()
 if tool_candidate.lower() not in [t.lower() for t in excluded_tools]:
     with open(excluded_tools_path, "a", encoding="utf-8") as f:
@@ -149,23 +144,30 @@ with open(backup_file, "w", encoding="utf-8") as backup:
     backup.write(existing_content)
 log(f"🧾 Blog content backed up to: {backup_file}")
 
-# === INSERT NEW LINK INTO EXISTING LIST ===
+# === INSERT NEW LINK INTO RECENT POSTS LIST ===
 new_list_item = f'<li><a href="{post_url}">{post_title}</a></li>'
 
+# Matches the <h2>Recent Posts</h2> followed by the list block
 pattern = r'(<h2 class="wp-block-heading">Recent Posts<\/h2>.*?<ul class="wp-block-list">)(.*?)(</ul>)'
 match = re.search(pattern, existing_content, flags=re.DOTALL)
 
+# === Validate Pattern Match ===
 if not match:
-    log("❌ Could not locate the 'Recent Posts' section.")
+    log("❌ Could not locate the 'Recent Posts' section. Aborting update.")
     exit()
+else:
+    log("✅ Found 'Recent Posts' section. Inserting new post link...")
 
+# === Insert New Post Link ===
 existing_list_items = match.group(2).strip()
 updated_list = f"{new_list_item}\n{existing_list_items}".strip()
 
-updated_content = match.group(1) + updated_list + match.group(3)
+# Replace inside the existing blog page HTML
+updated_recent_posts = match.group(1) + updated_list + match.group(3)
+updated_content = re.sub(pattern, updated_recent_posts, existing_content, flags=re.DOTALL)
 
 # === UPDATE /BLOG PAGE ===
-update_response = requests.post(
+update_response = requests.put(
     f"{BASE_URL}/pages/{page_id}",
     auth=(USERNAME, APP_PASSWORD),
     json={"content": updated_content}
