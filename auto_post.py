@@ -372,7 +372,12 @@ def list_and_delete_post():
 def generate_title(content):
     try:
         title_prompt = (
-            "Based on this blog post content, generate a clear and concise title. "
+            "Based on this blog post content, generate a clear and SEO-friendly title. "
+            "The title should:\n"
+            "- Be descriptive and specific\n"
+            "- Include the main topic and action (e.g. 'How to...', 'Complete Guide to...', etc.)\n"
+            "- Be 50-60 characters long\n"
+            "- Not include the date or words like 'automated' or 'post'\n"
             "Return only the title, without any markdown formatting or extra text:\n\n" + content
         )
         
@@ -403,30 +408,35 @@ def generate_and_review_post(prompt, is_default_prompt=True):
             log(f"❌ Failed to generate content: {e}")
             return None, None
 
-        if is_default_prompt:
-            # For default prompt, extract title from markdown
-            first_line = content.splitlines()[0].strip()
-            if first_line.startswith("#"):
-                extracted_title = first_line.lstrip("#").strip()
-                content = "\n".join(content.splitlines()[1:]).strip()
-            else:
-                extracted_title = f"Automated Post - {datetime.now().strftime('%Y-%m-%d')}"
-        else:
-            # For custom prompt, generate title separately
+        # Always try to generate a proper title, regardless of prompt type
+        generated_title = None
+        
+        # First try to extract from markdown if it exists
+        first_line = content.splitlines()[0].strip()
+        if first_line.startswith("#"):
+            generated_title = first_line.lstrip("#").strip()
+            content = "\n".join(content.splitlines()[1:]).strip()
+        
+        # If no markdown title, generate one using GPT
+        if not generated_title:
             generated_title = generate_title(content)
-            if generated_title:
-                extracted_title = generated_title
-            else:
-                extracted_title = f"Custom Post - {datetime.now().strftime('%Y-%m-%d')}"
+        
+        # If both methods fail (very unlikely), create a descriptive title
+        if not generated_title:
+            # Extract first sentence or first 100 characters
+            first_sentence = content.split('.')[0].strip()
+            if len(first_sentence) > 60:
+                first_sentence = first_sentence[:57] + "..."
+            generated_title = first_sentence
 
-        if extracted_title.lower() not in used_titles:
+        if generated_title.lower() not in used_titles:
             break
 
-        log(f"⚠️ Duplicate title detected: '{extracted_title}', generating a new one...")
+        log(f"⚠️ Duplicate title detected: '{generated_title}', generating a new one...")
 
     # Show preview and get confirmation
     print("\n=== Post Preview ===")
-    print(f"Title: {extracted_title}")
+    print(f"Title: {generated_title}")
     print("\nContent:")
     print("-------------------")
     print(content)
@@ -434,20 +444,25 @@ def generate_and_review_post(prompt, is_default_prompt=True):
     
     while True:
         choice = get_valid_input(
-            "\nWhat would you like to do?\n1. Publish this post\n2. Generate a new version\n3. Cancel\nYour choice (1-3): ",
-            "❌ Please enter a number between 1 and 3"
+            "\nWhat would you like to do?\n1. Publish this post\n2. Generate a new version\n3. Edit title\n4. Cancel\nYour choice (1-4): ",
+            "❌ Please enter a number between 1 and 4"
         )
         
-        if choice in ["1", "2", "3"]:
+        if choice in ["1", "2", "3", "4"]:
             break
-        print("❌ Invalid choice. Please enter 1, 2, or 3.")
+        print("❌ Invalid choice. Please enter 1, 2, 3, or 4.")
     
     if choice == "1":
-        return extracted_title, content
+        return generated_title, content
     elif choice == "2":
         log("🔄 Generating new version...")
         return generate_and_review_post(prompt, is_default_prompt)
-    else:  # choice == "3"
+    elif choice == "3":
+        new_title = input("Enter new title: ").strip()
+        if new_title:
+            return new_title, content
+        return generate_and_review_post(prompt, is_default_prompt)
+    else:  # choice == "4"
         log("🛑 Post creation cancelled.")
         return None, None
 
@@ -1173,7 +1188,7 @@ def main_menu():
         choice = input("\nEnter your choice (1-8): ").strip()
         
         if choice == "1":
-            prompt = "Write a blog post about a useful IT tool. Focus on its practical applications, benefits, and how to get started with it. Include code examples or configuration steps where relevant."
+            prompt = "Write a blog post about a useful IT tool. Focus on its practical applications, benefits, and how to get started with it. Include code examples or configuration steps where relevant. use a human tone, no dashes, and smoother transitions."
             title, content = generate_and_review_post(prompt)
             if title and content:
                 # Generate tags
@@ -1188,7 +1203,7 @@ def main_menu():
                 else:
                     print("❌ Failed to publish post")
         elif choice == "2":
-            prompt = "Write a blog post about a general technology or IT topic. Focus on explaining complex concepts in simple terms, providing real-world examples, and offering practical insights."
+            prompt = "Write a blog post about a general technology or IT topic. Focus on explaining complex concepts in simple terms, providing real-world examples, and offering practical insights. use a human tone, no dashes, and smoother transitions."
             title, content = generate_and_review_post(prompt)
             if title and content:
                 # Generate tags
@@ -1203,7 +1218,7 @@ def main_menu():
                 else:
                     print("❌ Failed to publish post")
         elif choice == "3":
-            prompt = "Write a step-by-step guide for an IT-related task. Include clear instructions, code snippets or commands where needed, and explain each step thoroughly."
+            prompt = "Write a step-by-step guide for an IT-related task. Include clear instructions, code snippets or commands where needed, and explain each step thoroughly. use a human tone, no dashes, and smoother transitions."
             title, content = generate_and_review_post(prompt)
             if title and content:
                 # Generate tags
