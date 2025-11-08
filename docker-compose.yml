@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./user_data:/app/user_data
+      - ./logs:/app/logs
+      - ./backups:/app/backups
+      - ./users.db:/app/users.db
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - PYTHONUNBUFFERED=1
+      # Mail settings
+      - MAIL_SERVER=smtp.gmail.com
+      - MAIL_PORT=587
+      - MAIL_USE_TLS=true
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_DEFAULT_SENDER=${MAIL_DEFAULT_SENDER}
+      # Backup and security settings
+      - BACKUP_ENCRYPTION_KEY=${BACKUP_ENCRYPTION_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      # WordPress settings (optional, can be set per user in the app)
+      - WP_BASE_URL=${WP_BASE_URL:-}
+      - WP_USERNAME=${WP_USERNAME:-}
+      - WP_PASSWORD=${WP_PASSWORD:-}
+      # OpenAI settings (optional, can be set per user in the app)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3" 
