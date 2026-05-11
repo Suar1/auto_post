@@ -1,5 +1,8 @@
 # Auto Blog Post Generator and Manager
 
+> [!IMPORTANT]
+> **NOTICE: This repository is no longer actively updated or maintained.**
+
 A comprehensive Flask application for automating blog post generation, management, and WordPress integration with advanced backup capabilities and AI-powered content creation.
 
 ## 🌟 Features
